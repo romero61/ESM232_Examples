@@ -190,6 +190,9 @@ head(res)
 
 # another example using our low flow statistics
 # use apply to compute for all the data
+# using the updated low flow metrics routing that also computed combined metrics
+
+source("../R/compute_lowflowmetrics_all.R")
 res = msage %>% select(-date, -month, -day, -year, -wy ) %>% map_df(compute_lowflowmetrics_all, o=sager$obs, month=msage$month, day=msage$day, year=msage$year, wy=msage$wy)
 
 
