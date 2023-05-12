@@ -1,14 +1,42 @@
 ---
-title: "Calibration Assignment"
-author: "Guillermo Romero & Javier Patron"
-format: pdf
-editor: visual
+title: "Calibration Assigment"
+author: "Guillermo Romero & Javier Patrón"
+date: today
+format: 
+  pdf:
+      toc: false
+      shift-heading-level-by: 2
+      fig-pos: "H"
+      fig-cap-location: top
+      geometry:
+        - top=1in
+        - right=.8in
+        - bottom=1in
+        - left=.8in
+      link-citations: yes
+      linkcolor: blue
+      include-in-header: 
+        text: |
+          \usepackage{fancyhdr}
+          \usepackage{titling}
+          \pagestyle{fancy}
+          \fancyhf{}
+          \renewcommand\maketitle{
+            \fancyhead[C]{
+              \thetitle
+              \ifx \theauthor\empty  \else \ – \theauthor \fi
+              \ifx \thedate\empty  \else \ – \thedate \ \fi
+            }
+          }
+          \fancyfoot[C]{\thepage}
+editor: 
+  markdown: 
+    wrap: sentence
 ---
-
 
 ```{r}
 #| echo: false
-
+#| message: false
 library(tidyverse)
 library(purrr)
 library(flextable)
@@ -16,30 +44,23 @@ library(here)
 library(ggthemr)
 ```
 
-# **Assignment**
-
--   <div>
-
-    > Part 1 from above: R function that codes a metric for performance evaluation
-    >
-    > -   must be a combination of at least two performance measures
-    >
-    > -   include some comments that explain 'why' this metric
-
-    </div>
+> [Part 1 from above: R function that codes a metric for performance evaluation - must be a combination of at least two performance measures - include some comments that explain 'why' this metric]{.smallcaps}
 
 This combined metric can be used to evaluate the model performance considering both the discrepancy between the observed and modeled flow values as well as the linear relationship between them.
-
 Here's the reasoning behind this metric and an overview of the steps:
 
-**Transformed Difference:** This measure captures the difference between the observed and modeled flow values at the annual scale. By calculating the difference between the sum of observed and modeled values for each water year, we can assess how well the model is reproducing the overall annual flow. The difference is then normalized by the standard deviation of the differences to account for the variations in the dataset and to have a comparable value across different datasets.
+**Transformed Difference:** This measure captures the difference between the observed and modeled flow values at the annual scale.
+By calculating the difference between the sum of observed and modeled values for each water year, we can assess how well the model is reproducing the overall annual flow.
+The difference is then normalized by the standard deviation of the differences to account for the variations in the dataset and to have a comparable value across different datasets.
 
-**Correlation Coefficient:** This measure captures the linear relationship between the observed and modeled flow values. A high correlation coefficient indicates that the model is able to reproduce the overall pattern of the flow values throughout the dataset.
+**Correlation Coefficient:** This measure captures the linear relationship between the observed and modeled flow values.
+A high correlation coefficient indicates that the model is able to reproduce the overall pattern of the flow values throughout the dataset.
 
-**Combining the measures:** The transformed difference and correlation coefficient are combined by calculating their arithmetic mean. This provides a single value representing the model's performance, considering both the discrepancy between observed and modeled flow values and their linear relationship.
+**Combining the measures:** The transformed difference and correlation coefficient are combined by calculating their arithmetic mean.
+This provides a single value representing the model's performance, considering both the discrepancy between observed and modeled flow values and their linear relationship.
 
-In summary, the combined_metric function evaluates the performance of a hydrologic model by considering both the difference between the observed and modeled flow values at the annual scale and the linear relationship between them. This combined metric can be used to compare the performance of different models and assess how well they reproduce the flow values in a given dataset.
-
+In summary, the combined_metric function evaluates the performance of a hydrologic model by considering both the difference between the observed and modeled flow values at the annual scale and the linear relationship between them.
+This combined metric can be used to compare the performance of different models and assess how well they reproduce the flow values in a given dataset.
 
 ```{r}
 combined_metric <- function(data) {
@@ -49,34 +70,34 @@ combined_metric <- function(data) {
   
   # Calculate the mean difference
   mean_difference <- mean(sager_differences$difference_obs_mod)
-  
   # Calculate the standard deviation of the differences
   std_dev_difference <- sd(sager_differences$difference_obs_mod)
   
   # Compute the transformed difference (e.g., normalize by the standard deviation)
   sager_differences <-
     sager_differences |> mutate(transformed_diff = difference_obs_mod / std_dev_difference)
-  
   # Compute the correlation coefficient between obs and model
   correlation_coefficient <- cor(data$obs, data$model)
-  
   # Combine the transformed difference and the correlation coefficient
   combined_metric <-
     (mean(sager_differences$transformed_diff) + correlation_coefficient) / 2
   
-  combined_metric
+  return(combined_metric)
 }
 
 ```
 
-# 2
--   R markdown that does the following steps (with lots of documentation of the work flow):
+{{< pagebreak >}}
 
-    -   Part 2 from above:
+-   [R markdown that does the following steps (with lots of documentation of the work flow):]{.smallcaps}
 
-        1.  Apply your performance function to a subset of the Sagehen data set (with multiple simulations) that you want to use for calibration
-        
-We perform a split-sample calibration using the year 1984 as the calibration threshold. Then find the best parameter set and graph the mean August streamflow for the best parameter set. Finally compute the performance of the model using the best parameter set in pre and post-calibration periods.
+    -   [Part 2 from above:]{.smallcaps}
+
+        1.  [Apply your performance function to a subset of the Sagehen data set (with multiple simulations) that you want to use for calibration]{.smallcaps}
+
+We perform a split-sample calibration using the year 1984 as the calibration threshold.
+Then find the best parameter set and graph the mean August streamflow for the best parameter set.
+Finally compute the performance of the model using the best parameter set in pre and post-calibration periods.
 
 ```{r}
 # Read and organize the data
@@ -104,7 +125,6 @@ sagerm <- left_join(sagerm, sager[, c("obs", "date")], by = c("date"))
 calibration_data <- subset(sagerm, wy < 1984)
 ```
 
-
 ```{r}
 # Define a function to compute the combined_metric for each simulation
 combined_metric_for_simulation <- function(sname, data, obs) {
@@ -117,26 +137,24 @@ combined_metric_for_simulation <- function(sname, data, obs) {
 
 # Compute the combined_metric for each simulation during the calibration period
 res <- map_dfr(snames, combined_metric_for_simulation, data = calibration_data, obs = calibration_data$obs)
-
 ft <- flextable(head(res))
 
-theme_vader(ft)
+theme_apa(ft)
 ```
-
 
 ```{r}
 # Find the best and worst parameter sets
-best_parameter <- res %>% slice_max(combined_metric) |> mutate(parameter_type = 'best', .before = sim)
-worst_parameter <- res %>% slice_min(combined_metric) |> mutate(parameter_type = 'worst', .before = sim)
+best_parameter <- res %>% slice_max(combined_metric) |> mutate(param_type = 'best', .before = sim)
+worst_parameter <- res %>% slice_min(combined_metric) |> mutate(param_type = 'worst', .before = sim)
 
 params <- bind_rows(best_parameter,worst_parameter) |> 
   flextable()
 
-theme_vader(params)
+theme_apa(params)
 ```
 
 ```{r}
-
+#| include: false
 ggthemr('flat dark', type = 'outer', layout = "scientific")
 
 ```
@@ -155,16 +173,12 @@ comparison_data_mwyl <- comparison_data_mwy %>%
   pivot_longer(cols = !c(month, wy), names_to = "sim", values_to = "flow")
 ```
 
-
 ```{r}
 ggplot(subset(comparison_data_mwyl, month == 8), aes(sim, flow)) + geom_boxplot()
 ```
 
-
-
-   
-
     2.  Summarize the performance over the calibration period in 1-2 graphs; you can decide what is useful
+
 ```{r}
 # Apply the best parameter set to the validation data
 best_sim <- best_parameter$sim
@@ -181,7 +195,6 @@ mean_august_streamflow <- validation_data_adjusted %>%
             mean_model = mean(model))
 ```
 
-
 ```{r}
 ggplot(mean_august_streamflow, aes(x = year)) +
   geom_line(aes(y = mean_obs, color = "Observed")) +
@@ -191,7 +204,6 @@ ggplot(mean_august_streamflow, aes(x = year)) +
        y = "Streamflow",
        color = "Data")
 ```
-
 
 ```{r}
 # Plot the performance over the calibration period
@@ -205,7 +217,6 @@ ggplot(res, aes(x = sim, y = combined_metric, color = combined_metric)) +
        color = "Combined Metric")
 ```
 
-
 ```{r}
 # Compute the performance of the model using the best parameter set in pre and post-calibration periods
 pre_calibration_performance <- combined_metric(calibration_data %>% mutate(model = !!sym(best_sim)))
@@ -217,4 +228,3 @@ performance_change
 ```
 
         3.  Record your 'best' and 'worst' parameter set in this [spreadsheet](https://docs.google.com/spreadsheets/d/1444ILTaP6pcqvudQopZZVP2WDDJ1NNgXX6sdPdwdbXE/edit#gid=0) and in your Rmd
-
